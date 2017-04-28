@@ -33,8 +33,15 @@ namespace PackagesConfigToPackageReference
                         XName.Get("Version"), version));
                     packageReference.Add(new XAttribute(XName.Get("Include"), id));
 
-                    var propertyGroupElements = csprojXml.Elements(XName.Get("PropertyGroup"));
-                    propertyGroupElements.Last().Add(packageReference);
+                    var propertyGroupElements = csprojXml.Elements(XName.Get("ItemGroup"));
+                    var propertyGroupElement = propertyGroupElements.LastOrDefault();
+                    if (propertyGroupElement == null)
+                    {
+                        propertyGroupElement = new XElement(XName.Get("ItemGroup"));
+                        csprojXml.Add(propertyGroupElement);
+                    }
+
+                    propertyGroupElement.Add(packageReference);
                 }
 
                 csprojXml.Save(csprojFile);
