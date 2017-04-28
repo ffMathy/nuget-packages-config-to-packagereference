@@ -26,7 +26,20 @@ namespace PackagesConfigToPackageReference
         {
           var id = package.Attribute(XName.Get("id")).Value;
           var version = package.Attribute(XName.Get("version")).Value;
+
+          var packageReference = new XElement(
+            XName.Get("PackageReference"),
+            new XElement(
+              XName.Get("Version"), version));
+          packageReference.Add(new XAttribute(XName.Get("Include"), id));
+          csprojXml.Add(packageReference);
         }
+
+        csprojXml.Save(csprojFile);
+
+        File.WriteAllText(csprojFile,
+          File.ReadAllText(csprojFile)
+            .Replace(" xmlns=\"\"", ""));
       }
     }
   }
