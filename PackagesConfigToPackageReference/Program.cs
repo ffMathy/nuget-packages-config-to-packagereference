@@ -12,36 +12,59 @@ namespace PackagesConfigToPackageReference
     {
         static void Main(string[] args)
         {
-            var packageConfigFiles = Directory.GetFiles(Environment.CurrentDirectory, "packages.config", SearchOption.AllDirectories);
-            foreach (var packageConfigFile in packageConfigFiles)
+            var csprojFiles = Directory.GetFiles(Environment.CurrentDirectory, "*.csproj", SearchOption.AllDirectories);
+            foreach (var csprojFile in csprojFiles)
             {
-                var folder = Path.GetDirectoryName(packageConfigFile);
-                var csprojFile = Directory.GetFiles(folder, "*.csproj", SearchOption.TopDirectoryOnly).Single();
+                var folder = Path.GetDirectoryName(csprojFile);
+                var packagesConfigFile = Path.Combine(folder, "packages.config");
 
                 var csprojXml = XElement.Load(csprojFile);
-                var packageConfigXml = XElement.Load(packageConfigFile);
 
-                var packages = packageConfigXml.Elements("package");
-                foreach (var package in packages)
+                if (File.Exists(packagesConfigFile))
                 {
-                    var id = package.Attribute(XName.Get("id")).Value;
-                    var version = package.Attribute(XName.Get("version")).Value;
+                    var packageConfigXml = XElement.Load(packagesConfigFile);
 
-                    var packageReference = new XElement(
-                      XName.Get("PackageReference"),
-                      new XElement(
-                        XName.Get("Version"), version));
-                    packageReference.Add(new XAttribute(XName.Get("Include"), id));
-
-                    var propertyGroupElements = csprojXml.Elements(XName.Get("ItemGroup"));
-                    var propertyGroupElement = propertyGroupElements.LastOrDefault();
-                    if (propertyGroupElement == null)
+                    var packages = packageConfigXml.Elements("package");
+                    foreach (var package in packages)
                     {
-                        propertyGroupElement = new XElement(XName.Get("ItemGroup"));
-                        csprojXml.Add(propertyGroupElement);
+                        var id = package.Attribute(XName.Get("id")).Value;
+                        var version = package.Attribute(XName.Get("version")).Value;
+
+                        var packageReference = new XElement(
+                            XName.Get("PackageReference"),
+                            new XElement(
+                                XName.Get("Version"), version));
+                        packageReference.Add(new XAttribute(XName.Get("Include"), id));
+
+                        var propertyGroupElements = csprojXml.Elements().Where(x => x.Name.LocalName == "ItemGroup");
+                        var propertyGroupElement = propertyGroupElements.LastOrDefault();
+                        if (propertyGroupElement == null)
+                        {
+                            propertyGroupElement = new XElement(XName.Get("ItemGroup"));
+                            csprojXml.Add(propertyGroupElement);
+                        }
+
+                        propertyGroupElement.Add(packageReference);
                     }
 
-                    propertyGroupElement.Add(packageReference);
+                    File.Delete(packagesConfigFile);
+                }
+
+                var csprojXmlElements = csprojXml.Elements();
+                foreach (var itemGroup in csprojXmlElements.Where(x => x.Name.LocalName == "ItemGroup"))
+                {
+                    var referenceElementsToRemove = itemGroup
+                        .Elements()
+                        .Where(x => x.Name.LocalName == "Reference")
+                        .Where(x => x
+                            .Elements()
+                            .SingleOrDefault(y => y.Name.LocalName == "HintPath")
+                            ?.Value
+                            .Contains("packages") == true);
+                    foreach (var element in referenceElementsToRemove)
+                    {
+                        element.Remove();
+                    }
                 }
 
                 csprojXml.Save(csprojFile);
@@ -49,7 +72,6 @@ namespace PackagesConfigToPackageReference
                 File.WriteAllText(csprojFile,
                   File.ReadAllText(csprojFile)
                     .Replace(" xmlns=\"\"", ""));
-                File.Delete(packageConfigFile);
             }
         }
     }
