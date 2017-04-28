@@ -50,20 +50,28 @@ namespace PackagesConfigToPackageReference
                     File.Delete(packagesConfigFile);
                 }
 
-                var csprojXmlElements = csprojXml.Elements();
-                foreach (var itemGroup in csprojXmlElements.Where(x => x.Name.LocalName == "ItemGroup"))
+                var found = true;
+                while (found)
                 {
-                    var referenceElementsToRemove = itemGroup
-                        .Elements()
-                        .Where(x => x.Name.LocalName == "Reference")
-                        .Where(x => x
-                            .Elements()
-                            .SingleOrDefault(y => y.Name.LocalName == "HintPath")
-                            ?.Value
-                            .Contains("packages") == true);
-                    foreach (var element in referenceElementsToRemove)
+                    found = false;
+
+                    var csprojXmlElements = csprojXml.Elements();
+                    foreach (var itemGroup in csprojXmlElements.Where(x => x.Name.LocalName == "ItemGroup"))
                     {
-                        element.Remove();
+                        var referenceElementsToRemove = itemGroup
+                            .Elements()
+                            .Where(x => x.Name.LocalName == "Reference")
+                            .Where(x => x
+                                            .Elements()
+                                            .SingleOrDefault(y => y.Name.LocalName == "HintPath")
+                                            ?.Value
+                                            .Contains("packages") == true);
+                        foreach (var element in referenceElementsToRemove)
+                        {
+                            Console.WriteLine("Removing " + element);
+                            element.Remove();
+                            found = true;
+                        }
                     }
                 }
 
@@ -73,6 +81,9 @@ namespace PackagesConfigToPackageReference
                   File.ReadAllText(csprojFile)
                     .Replace(" xmlns=\"\"", ""));
             }
+
+            Console.WriteLine("Done!");
+            Console.ReadLine();
         }
     }
 }
