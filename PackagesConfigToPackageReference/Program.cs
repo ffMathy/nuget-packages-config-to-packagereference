@@ -40,6 +40,7 @@ namespace PackagesConfigToPackageReference
         File.WriteAllText(csprojFile,
           File.ReadAllText(csprojFile)
             .Replace(" xmlns=\"\"", ""));
+        File.Delete(packageConfigFile);
       }
     }
   }
